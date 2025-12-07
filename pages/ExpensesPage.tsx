@@ -405,15 +405,18 @@ const ExpensesPage: React.FC = () => {
 
       {/* Add Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm modal-backdrop">
-            <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-t-3xl sm:rounded-2xl animate-in slide-in-from-bottom-10 modal-content">
-            <div className="flex justify-between items-center mb-6">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm modal-backdrop" onClick={(e) => e.target === e.currentTarget && (setIsModalOpen(false), resetModal())}>
+            <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl animate-in slide-in-from-bottom-10 modal-content flex flex-col" style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 1rem)' }}>
+            {/* Fixed Header */}
+            <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
               <h2 className="text-xl font-bold dark:text-white">{modalMode === 'create' ? 'إضافة مصروف' : 'تعديل المصروف'}</h2>
               <button onClick={() => { setIsModalOpen(false); resetModal(); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                     <X size={24} />
                 </button>
             </div>
 
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 pt-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}>
             {/* AI Action */}
             <div className="mb-6">
                 <input 
@@ -504,6 +507,7 @@ const ExpensesPage: React.FC = () => {
                   {modalMode === 'create' ? 'حفظ المصروف' : 'تحديث المصروف'}
                 </button>
             </form>
+            </div>
           </div>
         </div>
       )}

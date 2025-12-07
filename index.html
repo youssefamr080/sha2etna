@@ -146,15 +146,26 @@
       
       /* Modal/Dialog safe area support */
       .modal-backdrop {
-        padding-bottom: env(safe-area-inset-bottom);
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
       }
       
       .modal-content {
-        max-height: 85vh;
-        max-height: 85dvh; /* Dynamic viewport height for mobile */
+        max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
         overflow-y: auto;
         overscroll-behavior: contain;
-        padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      /* Ensure submit buttons are always visible */
+      .modal-content form {
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .modal-content form button[type="submit"] {
+        flex-shrink: 0;
+        margin-top: auto;
       }
       
       @media (min-width: 640px) {
