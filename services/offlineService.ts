@@ -5,7 +5,7 @@
 // ============================================================
 
 const DB_NAME = 'sha2etna_offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Bumped to fix meta store keyPath issue
 
 interface SyncQueueItem {
   id: string;
@@ -187,19 +187,39 @@ export const updateSyncQueueItem = async (item: SyncQueueItem): Promise<void> =>
 // META OPERATIONS (Last Sync, etc.)
 // ============================================================
 interface MetaItem {
-  id: string;
+  key: string;
   value: unknown;
   updatedAt: number;
 }
 
 export const setMeta = async (key: string, value: unknown): Promise<void> => {
-  const metaItem: MetaItem = { id: key, value, updatedAt: Date.now() };
-  await saveToStore('meta', metaItem);
+  const metaItem: MetaItem = { key, value, updatedAt: Date.now() };
+  // Direct save to meta store (uses 'key' as keyPath, not 'id')
+  const database = await initOfflineDB();
+  const tx = database.transaction('meta', 'readwrite');
+  const store = tx.objectStore('meta');
+  store.put(metaItem);
+  
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 };
 
 export const getMeta = async <T>(key: string): Promise<T | null> => {
-  const result = await getByIdFromStore<MetaItem>('meta', key);
-  return (result?.value as T) ?? null;
+  // Direct get from meta store (uses 'key' as keyPath, not 'id')
+  const database = await initOfflineDB();
+  const tx = database.transaction('meta', 'readonly');
+  const store = tx.objectStore('meta');
+  const request = store.get(key);
+  
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => {
+      const result = request.result as MetaItem | undefined;
+      resolve(result?.value as T ?? null);
+    };
+    request.onerror = () => reject(request.error);
+  });
 };
 
 // ============================================================
