@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import * as PaymentService from '../services/PaymentService';
 import * as SettlementService from '../services/SettlementService';
+import * as HapticService from '../services/hapticService';
 import { Payment, TransactionStatus, UserBalance } from '../types';
-import { ArrowLeft, CheckCircle, Clock, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, ChevronDown, ChevronUp, Loader2, CreditCard } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
 import { getErrorMessage } from '../utils/errorHandler';
+import { useConfetti } from '../components/ui/Confetti';
 
 interface DebtLine {
   from: string;
@@ -54,6 +56,7 @@ const buildDebtLines = (balances: UserBalance[]): DebtLine[] => {
 const SettlementsPage: React.FC = () => {
   const { currentUser, group, users } = useApp();
   const { showToast: pushToast } = useToast();
+  const { triggerConfetti, ConfettiComponent } = useConfetti();
   const [debts, setDebts] = useState<DebtLine[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [expandedPaymentId, setExpandedPaymentId] = useState<string | null>(null);
@@ -118,7 +121,21 @@ const SettlementsPage: React.FC = () => {
     try {
       await PaymentService.confirmPayment(payment.id);
       await refreshSettlements();
-      pushToast('تم تأكيد الدفع', 'success');
+      
+      // Haptic and confetti feedback
+      HapticService.paymentConfirmed();
+      
+      // Check if all debts are settled
+      const balances = await SettlementService.calculateGroupBalances(group!.id);
+      const hasRemainingDebts = balances.some(b => Math.abs(b.balance) > 0.01);
+      
+      if (!hasRemainingDebts) {
+        // All debts settled - celebration!
+        triggerConfetti();
+        pushToast('🎉 تم تسوية جميع الديون!', 'success');
+      } else {
+        pushToast('تم تأكيد الدفع', 'success');
+      }
     } catch (error) {
       pushToast(getErrorMessage(error), 'error');
     } finally {
@@ -155,6 +172,7 @@ const SettlementsPage: React.FC = () => {
 
   return (
     <div className="p-5 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <ConfettiComponent />
       <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">التسويات والديون</h1>
 
       {/* Suggested Settlements */}
@@ -163,12 +181,16 @@ const SettlementsPage: React.FC = () => {
         <div className="space-y-3">
           {debts.length === 0 ? (
             <EmptyState
-              icon="🎉"
-              title="كل الحسابات مسوّاة! 🎉"
-              subtitle="لا توجد ديون متبقية على المجموعة حالياً."
+              variant="celebration"
+              title="كل الحسابات مسوّاة!"
+              subtitle="لا توجد ديون متبقية على المجموعة حالياً. أحسنتم! 👏"
             />
           ) : (
-            debts.map((debt, idx) => (
+            debts.map((debt, idx) => {
+              // Get InstaPay link for the recipient
+              const recipientInstaPayLink = localStorage.getItem(`instapay_${debt.to}`);
+              
+              return (
               <div key={idx} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <img src={users.find(u=>u.id === debt.from)?.avatar} className="w-8 h-8 rounded-full opacity-70" />
@@ -182,26 +204,40 @@ const SettlementsPage: React.FC = () => {
                     <p className="font-bold text-lg dark:text-white">{debt.amount} ج.م</p>
                     
                     {debt.from === currentUser?.id && (
-                        <button 
-                            onClick={() => {
-                              if (processingPaymentTo) return;
-                              handlePay(debt.to, debt.amount);
-                            }}
-                            disabled={processingPaymentTo !== null}
-                            className="mt-2 bg-primary text-white text-xs px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 active:scale-95 flex items-center gap-1.5 min-w-[80px] justify-center"
-                        >
-                            {processingPaymentTo === debt.to ? (
-                              <><Loader2 size={14} className="animate-spin" /></>
-                            ) : processingPaymentTo !== null ? (
-                              <span className="opacity-50">سدد الآن</span>
-                            ) : (
-                              'سدد الآن'
-                            )}
-                        </button>
+                        <div className="flex gap-2 mt-2">
+                          {recipientInstaPayLink && (
+                            <a
+                              href={recipientInstaPayLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-green-500 text-white text-xs px-3 py-2 rounded-lg font-medium flex items-center gap-1"
+                              onClick={() => HapticService.lightTap()}
+                            >
+                              <CreditCard size={14} />
+                              InstaPay
+                            </a>
+                          )}
+                          <button 
+                              onClick={() => {
+                                if (processingPaymentTo) return;
+                                handlePay(debt.to, debt.amount);
+                              }}
+                              disabled={processingPaymentTo !== null}
+                              className="bg-primary text-white text-xs px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 active:scale-95 flex items-center gap-1.5 min-w-[80px] justify-center"
+                          >
+                              {processingPaymentTo === debt.to ? (
+                                <><Loader2 size={14} className="animate-spin" /></>
+                              ) : processingPaymentTo !== null ? (
+                                <span className="opacity-50">سدد الآن</span>
+                              ) : (
+                                'سدد الآن'
+                              )}
+                          </button>
+                        </div>
                     )}
                 </div>
               </div>
-            ))
+            );})
           )}
         </div>
       </div>

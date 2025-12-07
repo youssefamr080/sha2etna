@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../App';
 import * as ChatService from '../services/ChatService';
 import * as GeminiService from '../services/geminiService';
+import * as HapticService from '../services/hapticService';
 import { ChatMessage } from '../types';
 import { Send, Mic, Square, Loader2, MessageCircle } from 'lucide-react';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -103,6 +104,7 @@ const ChatPage: React.FC = () => {
     const messageText = inputText.trim();
     setInputText(''); // Clear immediately for better UX
     setIsSending(true);
+    HapticService.lightTap();
     
     try {
       const created = await ChatService.sendMessage({
@@ -121,6 +123,7 @@ const ChatPage: React.FC = () => {
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
       setInputText(messageText); // Restore text on error
+      HapticService.errorFeedback();
     } finally {
       setIsSending(false);
     }

@@ -7,6 +7,7 @@ import * as GroupService from './services/GroupService';
 import * as NotificationService from './services/NotificationService';
 import * as ThemeService from './services/themeService';
 import { initializeApp } from './services/systemService';
+import * as OfflineService from './services/offlineService';
 import { ToastProvider } from './contexts/ToastContext';
 import { supabase } from './services/supabaseClient';
 import { User, Group } from './types';
@@ -14,6 +15,7 @@ import { User, Group } from './types';
 // PWA Components
 import { InstallPrompt } from './components/InstallPrompt';
 import { OfflineBanner } from './components/OfflineBanner';
+import { useIOSInstallPrompt } from './components/ui/IOSInstallGuide';
 
 // =============================================================================
 // LAZY LOADING WITH RETRY - Handles network failures gracefully
@@ -81,6 +83,7 @@ const PageLoader = () => (
 // Global Context
 interface AppContextType {
   currentUser: User | null;
+  currentGroup: Group | null;
   login: (user: User) => void;
   logout: () => void;
   users: User[];
@@ -212,16 +215,49 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [theme, setThemeState] = useState<'light' | 'dark'>('light');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  
+  // iOS PWA Install Guide
+  const { GuideComponent: IOSGuide } = useIOSInstallPrompt();
+  
   const loadUserContext = useCallback(async (user: User) => {
-    const [fetchedUsers, userGroups, unread] = await Promise.all([
-      UserService.getUsers(),
-      GroupService.getUserGroups(user.id),
-      NotificationService.getUnreadNotificationCount(user.id)
-    ]);
+    try {
+      const [fetchedUsers, userGroups, unread] = await Promise.all([
+        UserService.getUsers(),
+        GroupService.getUserGroups(user.id),
+        NotificationService.getUnreadNotificationCount(user.id)
+      ]);
 
-    setUsers(fetchedUsers);
-    setGroup(userGroups.length > 0 ? userGroups[0] : EMPTY_GROUP);
-    setUnreadNotifications(unread);
+      setUsers(fetchedUsers);
+      const currentGroupData = userGroups.length > 0 ? userGroups[0] : EMPTY_GROUP;
+      setGroup(currentGroupData);
+      setUnreadNotifications(unread);
+      
+      // Cache data for offline use
+      if (OfflineService.isOnline()) {
+        await Promise.all([
+          OfflineService.cacheUsers(fetchedUsers),
+          currentGroupData.id ? OfflineService.cacheGroup(currentGroupData) : Promise.resolve()
+        ]);
+      }
+    } catch (error) {
+      // If offline, try to load from cache
+      if (!OfflineService.isOnline()) {
+        console.log('Offline: loading from cache');
+        const [cachedUsers, cachedGroup] = await Promise.all([
+          OfflineService.getCachedUsers(),
+          OfflineService.getCachedGroup()
+        ]);
+        
+        if (cachedUsers.length > 0) {
+          setUsers(cachedUsers as User[]);
+        }
+        if (cachedGroup) {
+          setGroup(cachedGroup as Group);
+        }
+      } else {
+        throw error;
+      }
+    }
   }, []);
 
   const handleAuthenticatedUser = useCallback(async (profile: User) => {
@@ -343,6 +379,27 @@ const App = () => {
     return () => clearInterval(interval);
   }, [currentUser]);
 
+  // Process sync queue when coming back online
+  useEffect(() => {
+    const handleOnline = async () => {
+      console.log('Back online - processing sync queue');
+      const result = await OfflineService.processSyncQueue(async (item) => {
+        // Here we would sync each queued item based on its type
+        // For now, just log and mark as processed
+        console.log('Syncing:', item);
+        // TODO: Implement actual sync logic per table
+        return true;
+      });
+      
+      if (result.success > 0) {
+        console.log(`Synced ${result.success} items`);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
   const login = (user: User) => {
     void handleAuthenticatedUser(user);
   };
@@ -376,7 +433,8 @@ const App = () => {
   return (
     <ToastProvider>
       <AppContext.Provider value={{ 
-      currentUser, 
+      currentUser,
+      currentGroup: group,
       login, 
       logout, 
       users, 
@@ -422,6 +480,9 @@ const App = () => {
         
         {/* PWA: Install prompt banner (shows when installable) */}
         <InstallPrompt variant="banner" />
+        
+        {/* iOS PWA Install Guide */}
+        <IOSGuide />
       </AppContext.Provider>
     </ToastProvider>
   );

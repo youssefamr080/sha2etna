@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../App';
 import * as ExpenseService from '../services/ExpenseService';
 import * as GeminiService from '../services/geminiService';
+import * as HapticService from '../services/hapticService';
 import { ExpenseCategory, ExpenseCursor, ExpenseWithSplits } from '../types';
 import { Plus, Camera, Loader2, X, Mic, Square, Edit3, Trash2 } from 'lucide-react';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -9,12 +10,14 @@ import { useToast } from '../contexts/ToastContext';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import { translateCategory } from '../utils/categoryUtils';
+import { useSuccessCheckmark } from '../components/ui/SuccessCheckmark';
 
 const PAGE_SIZE = 20;
 
 const ExpensesPage: React.FC = () => {
   const { currentUser, group, users } = useApp();
   const { showToast } = useToast();
+  const { showSuccess, SuccessCheckmarkComponent } = useSuccessCheckmark();
   const [expenses, setExpenses] = useState<ExpenseWithSplits[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -149,6 +152,8 @@ const ExpensesPage: React.FC = () => {
           date: new Date().toISOString(),
           ...payload
         });
+        HapticService.successFeedback();
+        showSuccess('تمت إضافة المصروف');
         showToast('تمت إضافة المصروف بنجاح', 'success');
       } else if (editingExpense) {
         await ExpenseService.updateExpense({
@@ -156,6 +161,7 @@ const ExpensesPage: React.FC = () => {
           ...payload,
           participants: Array.from(new Set(participants))
         });
+        HapticService.mediumTap();
         showToast('تم تحديث المصروف', 'success');
       }
 
@@ -286,6 +292,7 @@ const ExpensesPage: React.FC = () => {
 
   return (
     <div className="p-5 min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
+      <SuccessCheckmarkComponent />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white">المصاريف المشتركة</h1>
         <button 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import * as ShoppingService from '../services/ShoppingService';
+import * as HapticService from '../services/hapticService';
 import { ShoppingItem } from '../types';
 import { Check, Plus, Trash2, Loader2 } from 'lucide-react';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -47,6 +48,7 @@ const ShoppingPage: React.FC = () => {
       const created = await ShoppingService.addShoppingItem(newItem);
       setItems(prev => [created, ...prev]);
       setNewItemText('');
+      HapticService.lightTap();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -61,6 +63,7 @@ const ShoppingPage: React.FC = () => {
     setProcessingItemId(id);
     const updated = !item.completed;
     setItems(prev => prev.map(i => i.id === id ? { ...i, completed: updated } : i));
+    HapticService.selectionChanged();
     try {
       await ShoppingService.toggleShoppingItem(id, updated, updated ? currentUser.id : undefined);
     } catch (error) {

@@ -207,3 +207,207 @@ export const leaveGroup = async (groupId: string, userId: string): Promise<boole
     throw createServiceError(error, 'تعذر مغادرة المجموعة');
   }
 };
+
+// ============================================================
+// NEW: Transfer Group Ownership
+// ============================================================
+export const transferOwnership = async (
+  groupId: string, 
+  currentOwnerId: string, 
+  newOwnerId: string
+): Promise<boolean> => {
+  try {
+    const group = await fetchGroup(groupId);
+    if (!group) {
+      throw createServiceError(new Error('المجموعة غير موجودة'), 'نقل الملكية');
+    }
+
+    if (group.created_by !== currentOwnerId) {
+      throw createServiceError(new Error('أنت لست مالك المجموعة'), 'نقل الملكية');
+    }
+
+    if (!group.members.includes(newOwnerId)) {
+      throw createServiceError(new Error('المستخدم ليس عضواً في المجموعة'), 'نقل الملكية');
+    }
+
+    // Update group owner
+    const { error: groupError } = await supabase
+      .from('groups')
+      .update({ created_by: newOwnerId })
+      .eq('id', groupId);
+
+    if (groupError) throw groupError;
+
+    // Update roles in group_members
+    await supabase
+      .from('group_members')
+      .update({ role: 'member' })
+      .eq('group_id', groupId)
+      .eq('user_id', currentOwnerId);
+
+    await supabase
+      .from('group_members')
+      .update({ role: 'admin' })
+      .eq('group_id', groupId)
+      .eq('user_id', newOwnerId);
+
+    return true;
+  } catch (error) {
+    throw createServiceError(error, 'تعذر نقل الملكية');
+  }
+};
+
+// ============================================================
+// NEW: Update Group Name
+// ============================================================
+export const updateGroupName = async (groupId: string, newName: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('groups')
+      .update({ name: newName.trim() })
+      .eq('id', groupId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    throw createServiceError(error, 'تعذر تحديث اسم المجموعة');
+  }
+};
+
+// ============================================================
+// NEW: Regenerate Invite Code
+// ============================================================
+export const regenerateInviteCode = async (groupId: string, userId: string): Promise<string> => {
+  try {
+    const group = await fetchGroup(groupId);
+    if (!group) {
+      throw createServiceError(new Error('المجموعة غير موجودة'), 'تجديد الكود');
+    }
+
+    if (group.created_by !== userId) {
+      throw createServiceError(new Error('فقط مالك المجموعة يمكنه تجديد الكود'), 'تجديد الكود');
+    }
+
+    const newCode = generateGroupCode();
+    const { error } = await supabase
+      .from('groups')
+      .update({ code: newCode })
+      .eq('id', groupId);
+
+    if (error) throw error;
+    return newCode;
+  } catch (error) {
+    throw createServiceError(error, 'تعذر تجديد كود الدعوة');
+  }
+};
+
+// ============================================================
+// NEW: Remove Member from Group (Admin only)
+// ============================================================
+export const removeMember = async (
+  groupId: string, 
+  adminId: string, 
+  memberId: string
+): Promise<boolean> => {
+  try {
+    const group = await fetchGroup(groupId);
+    if (!group) {
+      throw createServiceError(new Error('المجموعة غير موجودة'), 'إزالة العضو');
+    }
+
+    if (group.created_by !== adminId) {
+      throw createServiceError(new Error('فقط مالك المجموعة يمكنه إزالة الأعضاء'), 'إزالة العضو');
+    }
+
+    if (memberId === adminId) {
+      throw createServiceError(new Error('لا يمكنك إزالة نفسك'), 'إزالة العضو');
+    }
+
+    // Check if member has outstanding balance
+    const balances = await SettlementService.calculateGroupBalances(groupId);
+    const memberBalance = balances.find(b => b.userId === memberId);
+    if (memberBalance && Math.abs(memberBalance.balance) > 0.01) {
+      throw createServiceError(
+        new Error('لا يمكن إزالة عضو لديه ديون غير مسوّاة'),
+        'إزالة العضو'
+      );
+    }
+
+    const updatedMembers = group.members.filter(m => m !== memberId);
+    const { error } = await supabase
+      .from('groups')
+      .update({ members: updatedMembers })
+      .eq('id', groupId);
+
+    if (error) throw error;
+
+    await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', memberId);
+
+    // Notify the removed member
+    const admin = await UserService.getUserById(adminId);
+    await NotificationService.addNotificationToUser(
+      memberId,
+      `تمت إزالتك من مجموعة "${group.name}" بواسطة ${admin?.name || 'المسؤول'}`,
+      NotificationType.NEW_MEMBER
+    );
+
+    return true;
+  } catch (error) {
+    throw createServiceError(error, 'تعذر إزالة العضو');
+  }
+};
+
+// ============================================================
+// NEW: Delete Group (Admin only)
+// ============================================================
+export const deleteGroup = async (groupId: string, adminId: string): Promise<boolean> => {
+  try {
+    const group = await fetchGroup(groupId);
+    if (!group) {
+      throw createServiceError(new Error('المجموعة غير موجودة'), 'حذف المجموعة');
+    }
+
+    if (group.created_by !== adminId) {
+      throw createServiceError(new Error('فقط مالك المجموعة يمكنه حذفها'), 'حذف المجموعة');
+    }
+
+    // Check if any member has outstanding balance
+    const balances = await SettlementService.calculateGroupBalances(groupId);
+    const hasOutstandingDebts = balances.some(b => Math.abs(b.balance) > 0.01);
+    if (hasOutstandingDebts) {
+      throw createServiceError(
+        new Error('لا يمكن حذف المجموعة وهناك ديون غير مسوّاة'),
+        'حذف المجموعة'
+      );
+    }
+
+    // Delete all related data
+    await supabase.from('group_members').delete().eq('group_id', groupId);
+    await supabase.from('expenses').delete().eq('groupId', groupId);
+    await supabase.from('payments').delete().eq('groupId', groupId);
+    await supabase.from('bills').delete().eq('groupId', groupId);
+    await supabase.from('shopping_items').delete().eq('groupId', groupId);
+    await supabase.from('chat_messages').delete().eq('groupId', groupId);
+    await supabase.from('notifications').delete().eq('groupId', groupId);
+
+    // Finally delete the group
+    const { error } = await supabase.from('groups').delete().eq('id', groupId);
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    throw createServiceError(error, 'تعذر حذف المجموعة');
+  }
+};
+
+// ============================================================
+// NEW: Check if user is group admin
+// ============================================================
+export const isGroupAdmin = async (groupId: string, userId: string): Promise<boolean> => {
+  try {
+    const group = await fetchGroup(groupId);
+    return group?.created_by === userId;
+  } catch {
+    return false;
+  }
+};
