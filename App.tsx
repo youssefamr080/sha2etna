@@ -11,6 +11,10 @@ import { ToastProvider } from './contexts/ToastContext';
 import { supabase } from './services/supabaseClient';
 import { User, Group } from './types';
 
+// PWA Components
+import { InstallPrompt } from './components/InstallPrompt';
+import { OfflineBanner } from './components/OfflineBanner';
+
 // Pages
 import Dashboard from './pages/Dashboard';
 import ExpensesPage from './pages/ExpensesPage';
@@ -310,6 +314,9 @@ const App = () => {
       toggleTheme,
       unreadNotifications
     }}>
+        {/* PWA: Offline status banner */}
+        <OfflineBanner />
+        
         <Router>
           <Routes>
           {/* Auth Routes */}
@@ -337,6 +344,9 @@ const App = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
+        
+        {/* PWA: Install prompt banner (shows when installable) */}
+        <InstallPrompt variant="banner" />
       </AppContext.Provider>
     </ToastProvider>
   );
