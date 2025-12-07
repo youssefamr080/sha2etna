@@ -1,0 +1,8 @@
+{
+  "name": "Sha2etna",
+  "description": "A smart roommate expense tracking and settlement app with AI receipt scanning.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

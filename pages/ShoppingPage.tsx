@@ -1,0 +1,138 @@
+import React, { useState, useEffect } from 'react';
+import { useApp } from '../App';
+import * as ShoppingService from '../services/ShoppingService';
+import { ShoppingItem } from '../types';
+import { Check, Plus, Trash2 } from 'lucide-react';
+import { getErrorMessage } from '../utils/errorHandler';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+
+const ShoppingPage: React.FC = () => {
+  const { currentUser, group } = useApp();
+  const [items, setItems] = useState<ShoppingItem[]>([]);
+  const [newItemText, setNewItemText] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!group?.id) return;
+    const loadItems = async () => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const data = await ShoppingService.getShoppingList(group.id);
+        setItems(data);
+      } catch (error) {
+        setErrorMessage(getErrorMessage(error));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadItems();
+  }, [group?.id]);
+
+  const add = async () => {
+    if(!newItemText.trim() || !currentUser || !group.id) return;
+    const newItem: ShoppingItem = {
+        id: Date.now().toString(),
+        text: newItemText,
+        addedBy: currentUser.id,
+        groupId: group.id,
+        completed: false
+    };
+    try {
+      const created = await ShoppingService.addShoppingItem(newItem);
+      setItems(prev => [created, ...prev]);
+      setNewItemText('');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    }
+  };
+
+  const toggle = async (id: string) => {
+    if (!currentUser) return;
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const updated = !item.completed;
+    setItems(prev => prev.map(i => i.id === id ? { ...i, completed: updated } : i));
+    try {
+      await ShoppingService.toggleShoppingItem(id, updated, updated ? currentUser.id : undefined);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    }
+  };
+
+  const remove = async (id: string) => {
+    setItems(prev => prev.filter(i => i.id !== id));
+    try {
+      await ShoppingService.deleteShoppingItem(id);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    }
+  };
+
+  return (
+    <div className="p-5 min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">قائمة التسوق</h1>
+
+        {errorMessage && (
+          <div className="mb-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-200 px-4 py-2 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+
+        <div className="flex gap-2 mb-6">
+            <input 
+                type="text" 
+                value={newItemText} 
+                onChange={e => setNewItemText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && add()}
+                placeholder="إضافة غرض (مثلاً: حليب، صابون)..."
+                className="flex-1 border-none shadow-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800 dark:text-white"
+            />
+            <button onClick={add} disabled={!newItemText.trim()} className="bg-secondary text-white p-3 rounded-xl disabled:opacity-60">
+                <Plus size={24} />
+            </button>
+        </div>
+
+        <div className="space-y-2">
+            {items.map(item => (
+                <div key={item.id} className={`flex items-center justify-between p-4 rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-all ${item.completed ? 'opacity-50' : ''}`}>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => toggle(item.id)}
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                item.completed ? 'bg-primary border-primary text-white' : 'border-gray-300 dark:border-gray-600'
+                            }`}
+                        >
+                            {item.completed && <Check size={14} />}
+                        </button>
+                        <span className={`${item.completed ? 'line-through text-gray-400' : 'text-slate-800 dark:text-white font-medium'}`}>
+                            {item.text}
+                        </span>
+                    </div>
+                    <button onClick={() => remove(item.id)} className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full">
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            ))}
+             {items.length === 0 && !isLoading && (
+               <EmptyState
+                 icon="🛒"
+                 title="الثلاجة مليانة!"
+                 subtitle="ما نحتاج شيء حالياً. أضف أغراض جديدة من الأعلى."
+               />
+             )}
+             {isLoading && (
+               <div className="space-y-2">
+                 {Array.from({ length: 4 }).map((_, idx) => (
+                   <Skeleton key={idx} className="h-14" />
+                 ))}
+               </div>
+             )}
+        </div>
+    </div>
+  );
+};
+
+export default ShoppingPage;
