@@ -278,6 +278,9 @@ const App = () => {
   useEffect(() => {
     if (!currentUser || !group.id) return;
 
+    // Debounce realtime updates to prevent excessive API calls
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    
     const channel = supabase
       .channel(`group-members-${group.id}`)
       .on('postgres_changes', {
@@ -286,22 +289,35 @@ const App = () => {
         table: 'group_members',
         filter: `group_id=eq.${group.id}`
       }, () => {
-        void refreshData();
+        // Debounce to prevent multiple rapid refreshes
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          void refreshData();
+        }, 1000);
       });
 
     void channel.subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       void supabase.removeChannel(channel);
     };
   }, [currentUser?.id, group.id, refreshData]);
 
+  // Only refresh on visibility change if tab was hidden for a while
   useEffect(() => {
     if (!currentUser) return;
 
+    let lastHiddenTime = 0;
+    
     const handleVisibility = () => {
-      if (!document.hidden) {
-        void refreshData();
+      if (document.hidden) {
+        lastHiddenTime = Date.now();
+      } else {
+        // Only refresh if tab was hidden for more than 30 seconds
+        if (lastHiddenTime && Date.now() - lastHiddenTime > 30000) {
+          void refreshData();
+        }
       }
     };
 
@@ -311,14 +327,18 @@ const App = () => {
     };
   }, [currentUser?.id, refreshData]);
 
-  // Refresh notifications periodically
+  // Refresh notifications periodically (every 60 seconds instead of 30)
   useEffect(() => {
     if (!currentUser) return;
     
     const interval = setInterval(async () => {
-      const unread = await NotificationService.getUnreadNotificationCount(currentUser.id);
-      setUnreadNotifications(unread);
-    }, 30000); // Every 30 seconds
+      try {
+        const unread = await NotificationService.getUnreadNotificationCount(currentUser.id);
+        setUnreadNotifications(unread);
+      } catch {
+        // Silently fail - don't spam errors
+      }
+    }, 60000); // Every 60 seconds
     
     return () => clearInterval(interval);
   }, [currentUser]);

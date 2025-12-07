@@ -95,14 +95,20 @@ const ChatPage: React.FC = () => {
     }
   }, [messages]);
 
+  const [isSending, setIsSending] = useState(false);
+  
   const handleSend = async () => {
-    if (!inputText.trim() || !currentUser || !group.id) return;
+    if (!inputText.trim() || !currentUser || !group.id || isSending) return;
 
+    const messageText = inputText.trim();
+    setInputText(''); // Clear immediately for better UX
+    setIsSending(true);
+    
     try {
       const created = await ChatService.sendMessage({
         groupId: group.id,
         userId: currentUser.id,
-        text: inputText.trim()
+        text: messageText
       });
 
       setMessages(prev => {
@@ -112,9 +118,11 @@ const ChatPage: React.FC = () => {
         autoScrollRef.current = true;
         return [...prev, created].sort((a, b) => a.timestamp - b.timestamp);
       });
-      setInputText('');
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
+      setInputText(messageText); // Restore text on error
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -256,11 +264,12 @@ const ChatPage: React.FC = () => {
       >
         <button
             onClick={isRecording ? stopRecording : startRecording}
+            disabled={isSending}
             className={`p-3 rounded-full transition-colors flex-shrink-0 ${
                 isRecording 
                 ? 'bg-red-500 text-white animate-pulse' 
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+            } disabled:opacity-50`}
         >
              {isProcessing ? <Loader2 className="animate-spin" size={20} /> : (isRecording ? <Square size={20} fill="currentColor" /> : <Mic size={20} />)}
         </button>
@@ -268,16 +277,17 @@ const ChatPage: React.FC = () => {
             type="text" 
             value={inputText}
             onChange={e => setInputText(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            onKeyDown={e => e.key === 'Enter' && !isSending && handleSend()}
             placeholder="اكتب رسالة..."
-            className="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            disabled={isSending}
+            className="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
         />
         <button 
             onClick={handleSend}
-            className="bg-primary text-white p-3 rounded-full hover:bg-emerald-700 transition-colors flex-shrink-0"
-          disabled={isProcessing}
+            disabled={isProcessing || isSending || !inputText.trim()}
+            className="bg-primary text-white p-3 rounded-full hover:bg-emerald-700 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-            <Send size={20} className={isRecording ? 'opacity-0' : 'opacity-100'} /> 
+            {isSending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />} 
         </button>
       </div>
     </div>

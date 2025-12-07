@@ -183,12 +183,17 @@ const SettlementsPage: React.FC = () => {
                     
                     {debt.from === currentUser?.id && (
                         <button 
-                            onClick={() => handlePay(debt.to, debt.amount)}
+                            onClick={() => {
+                              if (processingPaymentTo) return;
+                              handlePay(debt.to, debt.amount);
+                            }}
                             disabled={processingPaymentTo !== null}
-                            className="mt-2 bg-primary text-white text-xs px-3 py-1.5 rounded-lg font-medium active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
+                            className="mt-2 bg-primary text-white text-xs px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 active:scale-95 flex items-center gap-1.5 min-w-[80px] justify-center"
                         >
                             {processingPaymentTo === debt.to ? (
-                              <><Loader2 size={12} className="animate-spin" /> جاري...</>
+                              <><Loader2 size={14} className="animate-spin" /></>
+                            ) : processingPaymentTo !== null ? (
+                              <span className="opacity-50">سدد الآن</span>
                             ) : (
                               'سدد الآن'
                             )}
@@ -232,14 +237,18 @@ const SettlementsPage: React.FC = () => {
                             {pay.status === TransactionStatus.PENDING ? (
                                 isIncoming ? (
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); confirmPayment(pay); }}
+                                        onClick={(e) => { 
+                                          e.stopPropagation(); 
+                                          if (confirmingPaymentId) return;
+                                          confirmPayment(pay); 
+                                        }}
                                         disabled={confirmingPaymentId !== null}
-                                        className="flex items-center gap-1 text-[10px] bg-green-600 text-white px-2 py-1 rounded shadow-sm hover:bg-green-700 z-10 disabled:opacity-60 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-1 text-[10px] bg-green-600 text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-green-700 z-10 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-w-[60px] justify-center"
                                     >
                                         {confirmingPaymentId === pay.id ? (
-                                          <><Loader2 size={10} className="animate-spin" /> جاري...</>
+                                          <Loader2 size={12} className="animate-spin" />
                                         ) : (
-                                          <>تأكيد <CheckCircle size={10} /></>
+                                          <>تأكيد <CheckCircle size={12} /></>
                                         )}
                                     </button>
                                 ) : (
