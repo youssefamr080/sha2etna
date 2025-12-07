@@ -73,17 +73,37 @@ export default defineConfig(({ mode }) => {
             // =============================================================
             runtimeCaching: [
               // ---------------------------------------------------------
-              // 📦 STATIC ASSETS: CacheFirst with long expiration
-              // Cache JS, CSS, fonts first - they rarely change
+              // 📦 JS CHUNKS: NetworkFirst for lazy-loaded chunks
+              // Ensures fresh chunks are always fetched first
+              // Falls back to cache if offline
               // ---------------------------------------------------------
               {
-                urlPattern: /\.(?:js|css|woff|woff2|ttf|eot)$/,
+                urlPattern: /\.js$/,
+                handler: 'NetworkFirst',
+                options: {
+                  cacheName: 'js-cache',
+                  expiration: {
+                    maxEntries: 50,
+                    maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+                  },
+                  networkTimeoutSeconds: 10, // Fall back to cache after 10s
+                  cacheableResponse: {
+                    statuses: [0, 200]
+                  }
+                }
+              },
+              
+              // ---------------------------------------------------------
+              // 🎨 CSS & FONTS: CacheFirst - these rarely change
+              // ---------------------------------------------------------
+              {
+                urlPattern: /\.(?:css|woff|woff2|ttf|eot)$/,
                 handler: 'CacheFirst',
                 options: {
                   cacheName: 'static-assets-cache',
                   expiration: {
-                    maxEntries: 100,
-                    maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                    maxEntries: 50,
+                    maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
                   },
                   cacheableResponse: {
                     statuses: [0, 200]

@@ -15,22 +15,66 @@ import { User, Group } from './types';
 import { InstallPrompt } from './components/InstallPrompt';
 import { OfflineBanner } from './components/OfflineBanner';
 
-// Lazy-loaded Pages for code splitting
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const ExpensesPage = lazy(() => import('./pages/ExpensesPage'));
-const SettlementsPage = lazy(() => import('./pages/SettlementsPage'));
-const ChatPage = lazy(() => import('./pages/ChatPage'));
-const ShoppingPage = lazy(() => import('./pages/ShoppingPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const AuthPage = lazy(() => import('./pages/AuthPage'));
-const GroupSetupPage = lazy(() => import('./pages/GroupSetupPage'));
-const BillsPage = lazy(() => import('./pages/BillsPage'));
-const StatsPage = lazy(() => import('./pages/StatsPage'));
+// =============================================================================
+// LAZY LOADING WITH RETRY - Handles network failures gracefully
+// =============================================================================
+const lazyWithRetry = (importFn: () => Promise<{ default: React.ComponentType<unknown> }>) => {
+  return lazy(() => 
+    importFn().catch(() => {
+      // On failure, wait a bit and retry once
+      return new Promise<{ default: React.ComponentType<unknown> }>((resolve) => {
+        setTimeout(() => {
+          importFn()
+            .then(resolve)
+            .catch(() => {
+              // If still failing, return an error component
+              resolve({
+                default: () => (
+                  <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-6" dir="rtl">
+                    <div className="text-center max-w-sm">
+                      <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-3xl">⚠️</span>
+                      </div>
+                      <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">تعذر تحميل الصفحة</h2>
+                      <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">
+                        تأكد من اتصالك بالإنترنت
+                      </p>
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-semibold"
+                      >
+                        إعادة المحاولة
+                      </button>
+                    </div>
+                  </div>
+                )
+              });
+            });
+        }, 1000);
+      });
+    })
+  );
+};
+
+// Lazy-loaded Pages with retry support
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const ExpensesPage = lazyWithRetry(() => import('./pages/ExpensesPage'));
+const SettlementsPage = lazyWithRetry(() => import('./pages/SettlementsPage'));
+const ChatPage = lazyWithRetry(() => import('./pages/ChatPage'));
+const ShoppingPage = lazyWithRetry(() => import('./pages/ShoppingPage'));
+const ProfilePage = lazyWithRetry(() => import('./pages/ProfilePage'));
+const AuthPage = lazyWithRetry(() => import('./pages/AuthPage'));
+const GroupSetupPage = lazyWithRetry(() => import('./pages/GroupSetupPage'));
+const BillsPage = lazyWithRetry(() => import('./pages/BillsPage'));
+const StatsPage = lazyWithRetry(() => import('./pages/StatsPage'));
 
 // Page loading fallback
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+    <div className="text-center">
+      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+      <p className="text-gray-500 dark:text-gray-400 text-sm">جاري التحميل...</p>
+    </div>
   </div>
 );
 
@@ -72,8 +116,8 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 safe-area-bottom pb-1">
-      <div className="flex justify-around items-center h-16">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 fixed-bottom-safe">
+      <div className="flex justify-around items-center h-14">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -151,9 +195,11 @@ const ProtectedRoute = ({ children, showHeader = true }: { children?: React.Reac
   if (!group.id) return <Navigate to="/group-setup" replace />;
   
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 font-sans transition-colors" dir="rtl">
+    <div className="min-h-screen min-h-[100svh] bg-gray-50 dark:bg-gray-900 font-sans transition-colors" dir="rtl">
       {showHeader && <Header />}
-      {children}
+      <div className="pb-navbar">
+        {children}
+      </div>
       <Navbar />
     </div>
   );

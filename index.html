@@ -102,8 +102,109 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
     <style>
-      body {
+      /* ===================================================================== */
+      /* 📱 PWA MOBILE OPTIMIZATIONS - Safe Areas & Touch                      */
+      /* ===================================================================== */
+      
+      /* Base styles */
+      * {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+      
+      html, body {
         font-family: 'Tajawal', sans-serif;
+        overflow-x: hidden;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      body {
+        /* Prevent pull-to-refresh on PWA */
+        overscroll-behavior: none;
+        /* Safe area padding for notched devices */
+        padding-top: env(safe-area-inset-top);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+      
+      /* Safe area utility classes */
+      .safe-area-top {
+        padding-top: env(safe-area-inset-top);
+      }
+      
+      .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      
+      .safe-area-inset {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+      
+      /* Fixed bottom navbar safe area */
+      .fixed-bottom-safe {
+        bottom: 0;
+        padding-bottom: calc(env(safe-area-inset-bottom) + 0.25rem);
+      }
+      
+      /* Content area with navbar space */
+      .pb-navbar {
+        padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+      }
+      
+      /* Sticky header safe area */
+      .sticky-header-safe {
+        top: env(safe-area-inset-top);
+      }
+      
+      /* Prevent text selection on UI elements */
+      button, a, nav {
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      
+      /* Smooth scrolling */
+      .scroll-smooth {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      /* Fix for iOS input zoom */
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+      
+      /* Hide scrollbar but keep functionality */
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      
+      /* PWA standalone mode specific */
+      @media all and (display-mode: standalone) {
+        body {
+          /* Extra padding for status bar in standalone mode */
+          min-height: 100vh;
+          min-height: -webkit-fill-available;
+        }
+        
+        html {
+          height: -webkit-fill-available;
+        }
+      }
+      
+      /* Prevent content from going under notch on landscape */
+      @supports (padding: max(0px)) {
+        body {
+          padding-left: max(0px, env(safe-area-inset-left));
+          padding-right: max(0px, env(safe-area-inset-right));
+        }
       }
     </style>
     <script type="importmap">
