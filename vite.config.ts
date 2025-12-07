@@ -227,6 +227,34 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      
+      // =================================================================
+      // 📦 BUILD OPTIMIZATION - Code Splitting
+      // =================================================================
+      // Split large dependencies into separate chunks to:
+      // - Reduce initial bundle size below 500KB warning threshold
+      // - Enable better caching (vendor chunks rarely change)
+      // - Improve load time with parallel chunk loading
+      // =================================================================
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              // React core - rarely changes
+              'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+              
+              // Supabase SDK - large but stable
+              'vendor-supabase': ['@supabase/supabase-js'],
+              
+              // Recharts - only needed on stats page
+              'vendor-charts': ['recharts'],
+              
+              // Lucide icons - tree-shakeable but still significant
+              'vendor-icons': ['lucide-react'],
+            }
+          }
+        }
       }
     };
 });

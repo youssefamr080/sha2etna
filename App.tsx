@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import React, { useState, useEffect, useCallback, createContext, useContext, lazy, Suspense } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { Home, Wallet, Calculator, MessageCircle, ShoppingBag, Bell, Moon, Sun } from 'lucide-react';
 import * as AuthService from './services/authService';
@@ -15,17 +15,24 @@ import { User, Group } from './types';
 import { InstallPrompt } from './components/InstallPrompt';
 import { OfflineBanner } from './components/OfflineBanner';
 
-// Pages
-import Dashboard from './pages/Dashboard';
-import ExpensesPage from './pages/ExpensesPage';
-import SettlementsPage from './pages/SettlementsPage';
-import ChatPage from './pages/ChatPage';
-import ShoppingPage from './pages/ShoppingPage';
-import ProfilePage from './pages/ProfilePage';
-import AuthPage from './pages/AuthPage';
-import GroupSetupPage from './pages/GroupSetupPage';
-import BillsPage from './pages/BillsPage';
-import StatsPage from './pages/StatsPage';
+// Lazy-loaded Pages for code splitting
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ExpensesPage = lazy(() => import('./pages/ExpensesPage'));
+const SettlementsPage = lazy(() => import('./pages/SettlementsPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const ShoppingPage = lazy(() => import('./pages/ShoppingPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const GroupSetupPage = lazy(() => import('./pages/GroupSetupPage'));
+const BillsPage = lazy(() => import('./pages/BillsPage'));
+const StatsPage = lazy(() => import('./pages/StatsPage'));
+
+// Page loading fallback
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
 // Global Context
 interface AppContextType {
@@ -318,6 +325,7 @@ const App = () => {
         <OfflineBanner />
         
         <Router>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
           {/* Auth Routes */}
           <Route path="/auth" element={
@@ -343,6 +351,7 @@ const App = () => {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </Router>
         
         {/* PWA: Install prompt banner (shows when installable) */}

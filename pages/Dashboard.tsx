@@ -1,10 +1,11 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useApp } from '../App';
 import * as ExpenseService from '../services/ExpenseService';
 import * as PaymentService from '../services/PaymentService';
-import { Expense, TransactionStatus } from '../types';
-import { TrendingUp, TrendingDown, PieChart } from 'lucide-react';
+import * as BillService from '../services/BillService';
+import { Expense, TransactionStatus, Bill } from '../types';
+import { TrendingUp, TrendingDown, PieChart, Calendar, Receipt, ArrowUpDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import Skeleton from '../components/ui/Skeleton';
@@ -36,7 +37,38 @@ const Dashboard: React.FC = () => {
   const { showToast } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [myBalance, setMyBalance] = useState(0);
+  const [nextBill, setNextBill] = useState<Bill | null>(null);
+  const [pendingSettlementsCount, setPendingSettlementsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Calculate monthly expenses
+  const { currentMonthTotal, lastMonthTotal, monthlyChange } = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    let currentTotal = 0;
+    let lastTotal = 0;
+
+    expenses.forEach(exp => {
+      const expDate = new Date(exp.date);
+      if (expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear) {
+        currentTotal += exp.amount;
+      } else if (expDate.getMonth() === lastMonth && expDate.getFullYear() === lastMonthYear) {
+        lastTotal += exp.amount;
+      }
+    });
+
+    const change = lastTotal > 0 ? ((currentTotal - lastTotal) / lastTotal) * 100 : 0;
+
+    return {
+      currentMonthTotal: currentTotal,
+      lastMonthTotal: lastTotal,
+      monthlyChange: change
+    };
+  }, [expenses]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -46,11 +78,23 @@ const Dashboard: React.FC = () => {
       }
 
       try {
-      const [{ items: allExpenses }, allPayments] = await Promise.all([
+      const [{ items: allExpenses }, allPayments, bills] = await Promise.all([
         ExpenseService.getExpenses({ groupId: group.id, limit: 250 }),
-        PaymentService.getPayments({ groupId: group.id })
+        PaymentService.getPayments({ groupId: group.id }),
+        BillService.getBills(group.id)
       ]);
       setExpenses(allExpenses);
+
+      // Find next unpaid bill
+      const now = new Date();
+      const upcomingBills = bills
+        .filter(b => b.status === 'pending' && new Date(b.dueDate) >= now)
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+      setNextBill(upcomingBills[0] || null);
+
+      // Count pending settlements (payments awaiting confirmation)
+      const pendingCount = allPayments.filter(p => p.status === TransactionStatus.PENDING).length;
+      setPendingSettlementsCount(pendingCount);
       
       if (!currentUser) {
         setIsLoading(false);
@@ -211,6 +255,68 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Dashboard Widgets */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {/* 1. Monthly Summary Widget */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+              <Calendar size={16} className="text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">مصاريف الشهر</p>
+          <p className="font-bold text-lg text-gray-800 dark:text-white" dir="ltr">
+            {currentMonthTotal.toFixed(0)} ج.م
+          </p>
+          {lastMonthTotal > 0 && (
+            <p className={`text-[10px] mt-1 ${monthlyChange >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+              {monthlyChange >= 0 ? '↑' : '↓'} {Math.abs(monthlyChange).toFixed(0)}% عن الشهر السابق
+            </p>
+          )}
+        </div>
+
+        {/* 2. Next Bill Due Widget */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+              <Receipt size={16} className="text-amber-600 dark:text-amber-400" />
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">أقرب فاتورة</p>
+          {nextBill ? (
+            <>
+              <p className="font-bold text-sm text-gray-800 dark:text-white truncate" title={nextBill.name}>
+                {nextBill.name}
+              </p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                {new Date(nextBill.dueDate).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-400">لا توجد فواتير</p>
+          )}
+        </div>
+
+        {/* 3. Pending Settlements Widget */}
+        <Link 
+          to="/settlements" 
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+              <ArrowUpDown size={16} className="text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">تسويات معلقة</p>
+          <p className="font-bold text-lg text-gray-800 dark:text-white">
+            {pendingSettlementsCount}
+          </p>
+          {pendingSettlementsCount > 0 && (
+            <p className="text-[10px] text-amber-500 mt-1">تحتاج تأكيد</p>
+          )}
+        </Link>
       </div>
 
       {/* Quick Links */}
