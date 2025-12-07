@@ -34,11 +34,15 @@ const ProfilePage: React.FC = () => {
   const [isEditingInstaPay, setIsEditingInstaPay] = useState(false);
   const [tempInstaPayLink, setTempInstaPayLink] = useState('');
 
-  // Load InstaPay from localStorage
+  // Load InstaPay from localStorage (with try-catch for private browsing)
   useEffect(() => {
     if (currentUser) {
-      const savedLink = localStorage.getItem(`instapay_${currentUser.id}`);
-      if (savedLink) setInstaPayLink(savedLink);
+      try {
+        const savedLink = localStorage.getItem(`instapay_${currentUser.id}`);
+        if (savedLink) setInstaPayLink(savedLink);
+      } catch {
+        // localStorage not available in private browsing
+      }
     }
   }, [currentUser]);
 
@@ -215,10 +219,14 @@ const ProfilePage: React.FC = () => {
   const handleSaveInstaPay = () => {
     if (!currentUser) return;
     
-    localStorage.setItem(`instapay_${currentUser.id}`, tempInstaPayLink);
-    setInstaPayLink(tempInstaPayLink);
-    setIsEditingInstaPay(false);
-    showToast('تم حفظ رابط InstaPay', 'success');
+    try {
+      localStorage.setItem(`instapay_${currentUser.id}`, tempInstaPayLink);
+      setInstaPayLink(tempInstaPayLink);
+      setIsEditingInstaPay(false);
+      showToast('تم حفظ رابط InstaPay', 'success');
+    } catch {
+      showToast('فشل حفظ الرابط', 'error');
+    }
   };
 
   const handleShareInstaPay = async () => {

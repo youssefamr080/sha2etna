@@ -18,11 +18,7 @@ const StatsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'group' | 'personal'>('group');
 
-  useEffect(() => {
-    loadStats();
-  }, [currentUser, group.id]);
-
-  const loadStats = async () => {
+  const loadStats = React.useCallback(async () => {
     if (!currentUser || !group.id) return;
     setIsLoading(true);
     
@@ -39,7 +35,11 @@ const StatsPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentUser, group.id, showToast]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const translateCategory = (cat: string) => {
     const map: Record<string, string> = {

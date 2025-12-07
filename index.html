@@ -144,6 +144,26 @@
         padding-right: env(safe-area-inset-right);
       }
       
+      /* Modal/Dialog safe area support */
+      .modal-backdrop {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      
+      .modal-content {
+        max-height: 85vh;
+        max-height: 85dvh; /* Dynamic viewport height for mobile */
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+      }
+      
+      @media (min-width: 640px) {
+        .modal-content {
+          max-height: 90vh;
+          max-height: 90dvh;
+        }
+      }
+      
       /* Fixed bottom navbar safe area */
       .fixed-bottom-safe {
         bottom: 0;

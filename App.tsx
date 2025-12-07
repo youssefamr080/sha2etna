@@ -382,17 +382,21 @@ const App = () => {
   // Process sync queue when coming back online
   useEffect(() => {
     const handleOnline = async () => {
-      console.log('Back online - processing sync queue');
-      const result = await OfflineService.processSyncQueue(async (item) => {
-        // Here we would sync each queued item based on its type
-        // For now, just log and mark as processed
-        console.log('Syncing:', item);
-        // TODO: Implement actual sync logic per table
-        return true;
-      });
-      
-      if (result.success > 0) {
-        console.log(`Synced ${result.success} items`);
+      try {
+        console.log('Back online - processing sync queue');
+        const result = await OfflineService.processSyncQueue(async (item) => {
+          // Here we would sync each queued item based on its type
+          // For now, just log and mark as processed
+          console.log('Syncing:', item);
+          // TODO: Implement actual sync logic per table
+          return true;
+        });
+        
+        if (result.success > 0) {
+          console.log(`Synced ${result.success} items`);
+        }
+      } catch (error) {
+        console.error('Sync failed:', error);
       }
     };
 

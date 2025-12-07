@@ -50,8 +50,8 @@ const IOSInstallGuide: React.FC<IOSInstallGuideProps> = ({ isOpen, onClose }) =>
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 modal-backdrop">
+      <div className="bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl modal-content">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
           <h2 className="text-lg font-bold text-slate-800 dark:text-white">تثبيت التطبيق</h2>

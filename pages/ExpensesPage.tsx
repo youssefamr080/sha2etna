@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../App';
 import * as ExpenseService from '../services/ExpenseService';
-import * as GeminiService from '../services/geminiService';
 import * as HapticService from '../services/hapticService';
 import { ExpenseCategory, ExpenseCursor, ExpenseWithSplits } from '../types';
 import { Plus, Camera, Loader2, X, Mic, Square, Edit3, Trash2 } from 'lucide-react';
@@ -11,6 +10,9 @@ import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import { translateCategory } from '../utils/categoryUtils';
 import { useSuccessCheckmark } from '../components/ui/SuccessCheckmark';
+
+// Lazy load GeminiService to reduce initial bundle size (saves ~220KB)
+const loadGeminiService = () => import('../services/geminiService');
 
 const PAGE_SIZE = 20;
 
@@ -202,6 +204,8 @@ const ExpensesPage: React.FC = () => {
           const base64String = reader.result as string;
           const base64Data = base64String.split(',')[1];
           
+          // Dynamic import - only loads when needed
+          const GeminiService = await loadGeminiService();
           const data = await GeminiService.scanReceipt(base64Data);
           if (data) {
             setAmount(data.amount.toString());
@@ -249,6 +253,8 @@ const ExpensesPage: React.FC = () => {
               const base64String = reader.result as string;
               const base64Data = base64String.split(',')[1];
               setIsProcessing(true);
+              // Dynamic import - only loads when needed
+              const GeminiService = await loadGeminiService();
               const text = await GeminiService.transcribeAudio(base64Data);
               if (text) {
                 setDescription(prev => (prev ? prev + ' ' + text : text));
@@ -399,8 +405,8 @@ const ExpensesPage: React.FC = () => {
 
       {/* Add Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm">
-            <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-t-3xl sm:rounded-2xl animate-in slide-in-from-bottom-10">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm modal-backdrop">
+            <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-t-3xl sm:rounded-2xl animate-in slide-in-from-bottom-10 modal-content">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold dark:text-white">{modalMode === 'create' ? 'إضافة مصروف' : 'تعديل المصروف'}</h2>
               <button onClick={() => { setIsModalOpen(false); resetModal(); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">

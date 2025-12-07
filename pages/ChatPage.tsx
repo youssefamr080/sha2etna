@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../App';
 import * as ChatService from '../services/ChatService';
-import * as GeminiService from '../services/geminiService';
 import * as HapticService from '../services/hapticService';
 import { ChatMessage } from '../types';
 import { Send, Mic, Square, Loader2, MessageCircle } from 'lucide-react';
@@ -146,12 +145,18 @@ const ChatPage: React.FC = () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
         const reader = new FileReader();
         reader.onloadend = async () => {
-            const base64String = reader.result as string;
-            const base64Data = base64String.split(',')[1];
-            setIsProcessing(true);
-            const text = await GeminiService.transcribeAudio(base64Data);
-            setInputText(prev => (prev ? prev + ' ' + text : text));
-            setIsProcessing(false);
+            try {
+              const base64String = reader.result as string;
+              const base64Data = base64String.split(',')[1];
+              setIsProcessing(true);
+              const GeminiService = await import('../services/geminiService');
+              const text = await GeminiService.transcribeAudio(base64Data);
+              setInputText(prev => (prev ? prev + ' ' + text : text));
+            } catch (error) {
+              showToast('حدث خطأ أثناء تحويل الصوت', 'error');
+            } finally {
+              setIsProcessing(false);
+            }
         };
         reader.readAsDataURL(blob);
         stream.getTracks().forEach(track => track.stop());
@@ -181,7 +186,7 @@ const ChatPage: React.FC = () => {
     <div className="flex flex-col min-h-[100svh] bg-gray-50 dark:bg-gray-900" dir="rtl">
       <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 p-4 sticky top-0 z-10">
         <h1 className="text-lg font-bold text-slate-800 dark:text-white">محادثة {group.name}</h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{group.members.length} أعضاء</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{group.members?.length || 0} أعضاء</p>
       </div>
 
       {errorMessage && (
@@ -230,13 +235,14 @@ const ChatPage: React.FC = () => {
         {messages.map(msg => {
           const isMe = msg.userId === currentUser?.id;
           const sender = users.find(u => u.id === msg.userId);
+          const senderAvatar = sender?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.userId}`;
 
           return (
             <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
               {!isMe && (
                 <img
-                  src={sender?.avatar}
-                  alt={sender?.name}
+                  src={senderAvatar}
+                  alt={sender?.name || 'عضو'}
                   className="w-8 h-8 rounded-full self-end object-cover"
                 />
               )}

@@ -251,9 +251,9 @@ export const InstallPrompt: React.FC<InstallPromptProps> = ({
   // Modal variant - centered modal
   if (variant === 'modal') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm modal-backdrop">
         <div 
-          className={`bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl ${className}`}
+          className={`bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full shadow-2xl modal-content ${className}`}
           role="dialog"
           aria-label="تثبيت التطبيق"
         >

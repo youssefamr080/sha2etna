@@ -68,16 +68,21 @@ const SettlementsPage: React.FC = () => {
     if (!group.id) return;
     const loadData = async () => {
       setIsLoading(true);
-      const [balances, paymentRows] = await Promise.all([
-        SettlementService.calculateGroupBalances(group.id),
-        PaymentService.getPayments({ groupId: group.id })
-      ]);
-      setDebts(buildDebtLines(balances));
-      setPayments(paymentRows);
-      setIsLoading(false);
+      try {
+        const [balances, paymentRows] = await Promise.all([
+          SettlementService.calculateGroupBalances(group.id),
+          PaymentService.getPayments({ groupId: group.id })
+        ]);
+        setDebts(buildDebtLines(balances));
+        setPayments(paymentRows);
+      } catch (error) {
+        pushToast(getErrorMessage(error), 'error');
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadData();
-  }, [group.id]);
+  }, [group.id, pushToast]);
 
   const refreshSettlements = async () => {
     if (!group.id) return;
@@ -187,15 +192,25 @@ const SettlementsPage: React.FC = () => {
             />
           ) : (
             debts.map((debt, idx) => {
-              // Get InstaPay link for the recipient
-              const recipientInstaPayLink = localStorage.getItem(`instapay_${debt.to}`);
+              // Get InstaPay link for the recipient (with try-catch for private browsing)
+              let recipientInstaPayLink: string | null = null;
+              try {
+                recipientInstaPayLink = localStorage.getItem(`instapay_${debt.to}`);
+              } catch {
+                // localStorage not available in private browsing
+              }
+              
+              const fromUser = users.find(u=>u.id === debt.from);
+              const toUser = users.find(u=>u.id === debt.to);
+              const fromAvatar = fromUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${debt.from}`;
+              const toAvatar = toUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${debt.to}`;
               
               return (
               <div key={idx} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <img src={users.find(u=>u.id === debt.from)?.avatar} className="w-8 h-8 rounded-full opacity-70" />
+                    <img src={fromAvatar} alt="" className="w-8 h-8 rounded-full opacity-70" />
                     <ArrowLeft size={16} className="text-gray-400" />
-                    <img src={users.find(u=>u.id === debt.to)?.avatar} className="w-8 h-8 rounded-full" />
+                    <img src={toAvatar} alt="" className="w-8 h-8 rounded-full" />
                 </div>
                 <div className="text-left">
                     <p className="text-xs text-gray-500 dark:text-gray-400">

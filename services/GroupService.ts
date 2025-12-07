@@ -381,14 +381,24 @@ export const deleteGroup = async (groupId: string, adminId: string): Promise<boo
       );
     }
 
-    // Delete all related data
-    await supabase.from('group_members').delete().eq('group_id', groupId);
-    await supabase.from('expenses').delete().eq('groupId', groupId);
-    await supabase.from('payments').delete().eq('groupId', groupId);
-    await supabase.from('bills').delete().eq('groupId', groupId);
-    await supabase.from('shopping_items').delete().eq('groupId', groupId);
-    await supabase.from('chat_messages').delete().eq('groupId', groupId);
-    await supabase.from('notifications').delete().eq('groupId', groupId);
+    // Delete all related data with error handling
+    const deleteOperations = [
+      { table: 'group_members', filter: { column: 'group_id', value: groupId } },
+      { table: 'expense_splits', filter: { column: 'expense_id', subquery: { table: 'expenses', column: 'groupId', value: groupId } } },
+      { table: 'expenses', filter: { column: 'groupId', value: groupId } },
+      { table: 'payments', filter: { column: 'groupId', value: groupId } },
+      { table: 'bills', filter: { column: 'groupId', value: groupId } },
+      { table: 'shopping_items', filter: { column: 'groupId', value: groupId } },
+      { table: 'chat_messages', filter: { column: 'groupId', value: groupId } },
+    ];
+
+    for (const op of deleteOperations) {
+      const { error } = await supabase.from(op.table).delete().eq(op.filter.column, op.filter.value || groupId);
+      if (error) {
+        console.error(`Failed to delete from ${op.table}:`, error);
+        // Continue with other deletions even if one fails
+      }
+    }
 
     // Finally delete the group
     const { error } = await supabase.from('groups').delete().eq('id', groupId);

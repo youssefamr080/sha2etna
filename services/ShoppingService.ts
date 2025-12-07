@@ -76,9 +76,11 @@ export const updateShoppingList = async (items: ShoppingItem[]): Promise<boolean
       throw createServiceError(new Error('groupId is required'), 'تحديث قائمة التسوق');
     }
 
-    await supabase.from('shopping_items').delete().eq('groupId', groupId);
-
-    const { error } = await supabase.from('shopping_items').insert(items);
+    // Use upsert instead of delete+insert to prevent data loss
+    const { error } = await supabase
+      .from('shopping_items')
+      .upsert(items, { onConflict: 'id' });
+    
     if (error) throw error;
 
     return true;

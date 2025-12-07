@@ -25,11 +25,7 @@ const BillsPage: React.FC = () => {
   const [reminder, setReminder] = useState(true);
   const [reminderDays, setReminderDays] = useState(3);
 
-  useEffect(() => {
-    loadBills();
-  }, [group.id]);
-
-  const loadBills = async () => {
+  const loadBills = React.useCallback(async () => {
     if (!group.id) return;
     setIsLoading(true);
     try {
@@ -40,7 +36,11 @@ const BillsPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [group.id, showToast]);
+
+  useEffect(() => {
+    loadBills();
+  }, [loadBills]);
 
   const handleAddBill = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,8 +221,8 @@ const BillsPage: React.FC = () => {
 
       {/* Add Bill Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm modal-backdrop">
+          <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-t-3xl sm:rounded-2xl modal-content">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">إضافة فاتورة</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
