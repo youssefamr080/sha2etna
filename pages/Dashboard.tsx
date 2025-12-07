@@ -3,13 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { useApp } from '../App';
 import * as ExpenseService from '../services/ExpenseService';
 import * as PaymentService from '../services/PaymentService';
-import { Expense, Payment, TransactionStatus } from '../types';
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Expense, TransactionStatus } from '../types';
 import { TrendingUp, TrendingDown, PieChart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import Skeleton from '../components/ui/Skeleton';
-import { translateCategory, translateCategoryFull } from '../utils/categoryUtils';
+import { translateCategory } from '../utils/categoryUtils';
 
 const DashboardSkeleton = () => (
   <div className="p-5 pb-24 space-y-6">
@@ -37,7 +36,6 @@ const Dashboard: React.FC = () => {
   const { showToast } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [myBalance, setMyBalance] = useState(0);
-  const [forecast, setForecast] = useState<string>("جاري التحليل...");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -96,36 +94,6 @@ const Dashboard: React.FC = () => {
       // Net = (paidByMe - myShareTotal) + sent - received
       const net = (paidByMe - myShareTotal) + sent - received;
       setMyBalance(net);
-
-      // Smart Local Analytics (no AI call)
-      const totalSpent = allExpenses.reduce((sum, e) => sum + e.amount, 0);
-      if (allExpenses.length > 0) {
-        // Calculate category spending
-        const categoryTotals: Record<string, number> = {};
-        allExpenses.forEach(exp => {
-          categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
-        });
-        
-        const topCategory = Object.entries(categoryTotals)
-          .sort(([, a], [, b]) => b - a)[0];
-        
-        const averageExpense = totalSpent / allExpenses.length;
-        const last7Days = allExpenses.filter(e => 
-          new Date(e.date).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000
-        );
-        
-        const weeklySpending = last7Days.reduce((sum, e) => sum + e.amount, 0);
-        const monthlyProjection = (weeklySpending / 7) * 30;
-
-        setForecast(
-          `إجمالي المصروفات: ${totalSpent.toFixed(0)} ج.م • ` +
-          `الأكثر إنفاقاً: ${translateCategoryFull(topCategory[0])} (${topCategory[1].toFixed(0)} ج.م) • ` +
-          `المتوسط: ${averageExpense.toFixed(0)} ج.م للمصروف • ` +
-          `التوقع الشهري: ${monthlyProjection.toFixed(0)} ج.م`
-        );
-      } else {
-        setForecast("لا توجد مصروفات حتى الآن.");
-      }
       } catch (error) {
         showToast('حدث خطأ أثناء تحميل البيانات', 'error');
       } finally {
@@ -134,11 +102,6 @@ const Dashboard: React.FC = () => {
     };
     loadData();
   }, [currentUser, group, showToast]);
-
-  const chartData = expenses.slice(-7).map(e => ({
-    name: new Date(e.date).toLocaleDateString('ar-SA', {weekday: 'short'}),
-    amount: e.amount
-  }));
 
   const memberDetails = (group.members || []).map(memberId => {
     const user = users.find(u => u.id === memberId);
@@ -211,7 +174,6 @@ const Dashboard: React.FC = () => {
                     <img src={member.avatar} alt={member.name} className="w-8 h-8 rounded-full border border-white/40" />
                     <div>
                       <p className="text-sm font-semibold text-gray-800 dark:text-white">{member.name}</p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-300">{member.email || '—'}</p>
                     </div>
                   </div>
                 ))
@@ -251,40 +213,32 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Smart Analytics */}
-      <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 mb-6">
-        <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl">📊</span>
-            <h3 className="font-semibold text-indigo-900 dark:text-indigo-200">تحليل ذكي للمصروفات</h3>
-        </div>
-        <p className="text-sm text-indigo-800 dark:text-indigo-300 leading-relaxed">
-            {forecast}
-        </p>
-      </div>
-
-      {/* Spending Graph */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">المصروفات الأسبوعية</h3>
-        {chartData.length > 0 ? (
-          <div style={{ width: '100%', height: 250 }} dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} tick={{fill: '#94a3b8'}} />
-                <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border:'none', boxShadow:'0 4px 6px -1px rgb(0 0 0 / 0.1)', textAlign: 'right'}} />
-                <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === chartData.length - 1 ? '#059669' : '#cbd5e1'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      {/* Quick Links */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <Link 
+          to="/bills" 
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        >
+          <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+            <span className="text-xl">📋</span>
           </div>
-        ) : (
-          <div className="h-48 flex flex-col items-center justify-center text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-             <PieChart size={32} className="mb-2 opacity-50" />
-             <p className="text-sm">لا توجد بيانات للعرض</p>
+          <div>
+            <p className="font-semibold text-gray-800 dark:text-white text-sm">الفواتير</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">تذكيرات الدفع</p>
           </div>
-        )}
+        </Link>
+        <Link 
+          to="/stats" 
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        >
+          <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
+            <PieChart size={20} className="text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <p className="font-semibold text-gray-800 dark:text-white text-sm">التحليلات</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">إحصائيات مفصلة</p>
+          </div>
+        </Link>
       </div>
 
       {/* Recent Activity */}
@@ -302,7 +256,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div>
                         <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{exp.description}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{translateCategory(exp.category)} • {new Date(exp.date).toLocaleDateString('ar-SA')}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{translateCategory(exp.category)} • {new Date(exp.date).toLocaleDateString('ar-EG')}</p>
                     </div>
                 </div>
                 <span className="font-bold text-gray-800 dark:text-gray-200" dir="ltr">-{exp.amount}</span>

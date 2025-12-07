@@ -74,7 +74,7 @@ const ProfilePage: React.FC = () => {
                         {!n.read && <div className="absolute top-0 right-0 w-1 h-full bg-primary"></div>}
                         <h4 className="font-bold text-sm text-gray-800 dark:text-white">{n.title}</h4>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{n.message}</p>
-                        <span className="text-[10px] text-gray-400 mt-2 block">{new Date(n.date).toLocaleDateString('ar-SA')}</span>
+                        <span className="text-[10px] text-gray-400 mt-2 block">{new Date(n.date).toLocaleDateString('ar-EG')}</span>
                     </div>
                 ))}
                 {!isLoading && notifications.length === 0 && <p className="text-gray-400 text-sm">لا توجد تنبيهات جديدة.</p>}

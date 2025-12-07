@@ -362,7 +362,7 @@ const ExpensesPage: React.FC = () => {
                     <strong className="text-slate-700 dark:text-gray-200">{getPayerName(exp.payerId)}</strong>
                 </div>
                 <div>
-                    {new Date(exp.date).toLocaleDateString('ar-SA')}
+                    {new Date(exp.date).toLocaleDateString('ar-EG')}
                 </div>
             </div>
           </div>

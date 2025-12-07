@@ -224,7 +224,7 @@ const SettlementsPage: React.FC = () => {
                                 <p className="font-medium text-sm dark:text-white">
                                     {isIncoming ? `استلمت من ${otherUser}` : `حولت إلى ${otherUser}`}
                                 </p>
-                                <p className="text-[10px] text-gray-400">{new Date(pay.date).toLocaleDateString('ar-SA')}</p>
+                                <p className="text-[10px] text-gray-400">{new Date(pay.date).toLocaleDateString('ar-EG')}</p>
                             </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
@@ -296,7 +296,7 @@ const SettlementsPage: React.FC = () => {
                                      <div className="flex items-center justify-center gap-1.5 text-gray-400 text-[10px]">
                                         <Clock size={12} />
                                         <span>
-                                            {new Date(pay.date).toLocaleDateString('ar-SA', { 
+                                            {new Date(pay.date).toLocaleDateString('ar-EG', { 
                                                 weekday: 'long', 
                                                 day: 'numeric',
                                                 month: 'long', 

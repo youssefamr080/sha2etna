@@ -78,7 +78,7 @@ export const getUserStats = async (userId: string, groupId: string): Promise<Use
         }, 0);
 
       monthlyExpenses.push({
-        month: new Date(`${month}-01`).toLocaleDateString('ar-SA', { month: 'short' }),
+        month: new Date(`${month}-01`).toLocaleDateString('ar-EG', { month: 'short' }),
         amount: Math.round(monthTotal)
       });
     });
@@ -161,7 +161,7 @@ export const getGroupStats = async (groupId: string): Promise<GroupStats> => {
         .reduce((sum, expense) => sum + expense.amount, 0);
 
       return {
-        month: new Date(`${month}-01`).toLocaleDateString('ar-SA', { month: 'short' }),
+        month: new Date(`${month}-01`).toLocaleDateString('ar-EG', { month: 'short' }),
         amount: Math.round(monthTotal)
       };
     });
