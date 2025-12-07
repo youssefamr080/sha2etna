@@ -42,8 +42,8 @@ const BillsPage: React.FC = () => {
     loadBills();
   }, [loadBills]);
 
-  const handleAddBill = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddBill = async (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault();
     if (!group.id || isSaving) return;
 
     setIsSaving(true);
@@ -221,49 +221,54 @@ const BillsPage: React.FC = () => {
 
       {/* Add Bill Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm modal-backdrop" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl modal-content flex flex-col" style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 1rem)' }}>
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
+          <div 
+            className="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300"
+            style={{ 
+              maxHeight: 'calc(100dvh - 100px)',
+              marginBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))'
+            }}
+          >
             {/* Fixed Header */}
-            <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">إضافة فاتورة</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                <X size={24} />
+            <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">إضافة فاتورة</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 -m-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                <X size={22} />
               </button>
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6 pt-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}>
-            <form onSubmit={handleAddBill} className="space-y-4">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم الفاتورة</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">اسم الفاتورة</label>
                 <input
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
                   placeholder="مثال: فاتورة الكهرباء"
-                  required
-                  className="w-full border dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+                  className="w-full border dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المبلغ</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">المبلغ</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   placeholder="0.00"
-                  required
-                  className="w-full border dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+                  className="w-full border dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">التصنيف</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">التصنيف</label>
                 <select
                   value={category}
                   onChange={e => setCategory(e.target.value as ExpenseCategory)}
-                  className="w-full border dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+                  className="w-full border dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                 >
                   {Object.values(ExpenseCategory).map(cat => (
                     <option key={cat} value={cat}>{translateCategory(cat)}</option>
@@ -272,34 +277,33 @@ const BillsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تاريخ الاستحقاق</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">تاريخ الاستحقاق</label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={e => setDueDate(e.target.value)}
-                  required
-                  className="w-full border dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+                  className="w-full border dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                 />
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                 <input
                   type="checkbox"
                   id="recurring"
                   checked={recurring}
                   onChange={e => setRecurring(e.target.checked)}
-                  className="w-5 h-5 text-primary rounded"
+                  className="w-5 h-5 text-primary rounded focus:ring-primary"
                 />
-                <label htmlFor="recurring" className="text-gray-700 dark:text-gray-300">فاتورة متكررة</label>
+                <label htmlFor="recurring" className="text-gray-700 dark:text-gray-300 text-sm cursor-pointer">فاتورة متكررة</label>
               </div>
 
               {recurring && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تكرار كل</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">تكرار كل</label>
                   <select
                     value={recurringPeriod}
-                    onChange={e => setRecurringPeriod(e.target.value as any)}
-                    className="w-full border dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+                    onChange={e => setRecurringPeriod(e.target.value as 'monthly' | 'quarterly' | 'yearly')}
+                    className="w-full border dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                   >
                     <option value="monthly">شهر</option>
                     <option value="quarterly">3 أشهر</option>
@@ -308,24 +312,29 @@ const BillsPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                 <input
                   type="checkbox"
                   id="reminder"
                   checked={reminder}
                   onChange={e => setReminder(e.target.checked)}
-                  className="w-5 h-5 text-primary rounded"
+                  className="w-5 h-5 text-primary rounded focus:ring-primary"
                 />
-                <label htmlFor="reminder" className="text-gray-700 dark:text-gray-300">تذكير قبل الموعد</label>
+                <label htmlFor="reminder" className="text-gray-700 dark:text-gray-300 text-sm cursor-pointer">تذكير قبل الموعد</label>
               </div>
+            </div>
+            </div>
 
+            {/* Fixed Footer with Submit Button */}
+            <div className="flex-shrink-0 px-5 py-4 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-b-none sm:rounded-b-2xl">
               <button
-                type="submit"
-                className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-md hover:bg-emerald-600 transition-colors"
+                type="button"
+                onClick={handleAddBill}
+                disabled={isSaving || !name || !amount || !dueDate}
+                className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg hover:bg-emerald-600 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                حفظ الفاتورة
+                {isSaving ? 'جاري الحفظ...' : 'حفظ الفاتورة'}
               </button>
-            </form>
             </div>
           </div>
         </div>

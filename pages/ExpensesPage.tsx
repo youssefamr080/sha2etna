@@ -125,8 +125,8 @@ const ExpensesPage: React.FC = () => {
     );
   };
 
-  const handleSubmitExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitExpense = async (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault();
     if (!currentUser || !amount || !group?.id) return;
 
     const participants = (selectedParticipants.length ? selectedParticipants : group.members) || [];
@@ -405,20 +405,26 @@ const ExpensesPage: React.FC = () => {
 
       {/* Add Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm modal-backdrop" onClick={(e) => e.target === e.currentTarget && (setIsModalOpen(false), resetModal())}>
-            <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl animate-in slide-in-from-bottom-10 modal-content flex flex-col" style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 1rem)' }}>
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && (setIsModalOpen(false), resetModal())}>
+            <div 
+              className="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl animate-in slide-in-from-bottom-10 flex flex-col shadow-2xl"
+              style={{ 
+                maxHeight: 'calc(100dvh - 100px)',
+                marginBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))'
+              }}
+            >
             {/* Fixed Header */}
-            <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-              <h2 className="text-xl font-bold dark:text-white">{modalMode === 'create' ? 'إضافة مصروف' : 'تعديل المصروف'}</h2>
-              <button onClick={() => { setIsModalOpen(false); resetModal(); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                    <X size={24} />
+            <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+              <h2 className="text-lg font-bold dark:text-white">{modalMode === 'create' ? 'إضافة مصروف' : 'تعديل المصروف'}</h2>
+              <button onClick={() => { setIsModalOpen(false); resetModal(); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 -m-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <X size={22} />
                 </button>
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6 pt-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
             {/* AI Action */}
-            <div className="mb-6">
+            <div className="mb-4">
                 <input 
                     type="file" 
                     accept="image/*" 
@@ -429,51 +435,50 @@ const ExpensesPage: React.FC = () => {
                 <button 
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isProcessing}
-                    className="w-full py-3 border-2 border-dashed border-primary/30 bg-primary/5 dark:bg-primary/10 rounded-xl text-primary font-medium flex items-center justify-center gap-2 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
+                    className="w-full py-2.5 border-2 border-dashed border-primary/40 bg-primary/5 dark:bg-primary/10 rounded-xl text-primary font-medium flex items-center justify-center gap-2 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors text-sm"
                 >
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <Camera size={20} />}
+                    {isProcessing ? <Loader2 className="animate-spin" size={18} /> : <Camera size={18} />}
                     {isProcessing ? "جاري التحليل..." : "مسح الفاتورة بالذكاء الاصطناعي"}
                 </button>
             </div>
 
-            <form onSubmit={handleSubmitExpense} className="space-y-4">
+            <div className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المبلغ</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">المبلغ</label>
                     <input 
-                        type="number" 
+                        type="number"
+                        inputMode="decimal"
                         value={amount} 
                         onChange={e => setAmount(e.target.value)}
-                        className="w-full border dark:border-gray-600 rounded-lg p-3 text-lg font-bold focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-700 dark:text-white"
+                        className="w-full border dark:border-gray-600 rounded-xl p-3 text-lg font-bold focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none bg-white dark:bg-gray-700 dark:text-white"
                         placeholder="0.00"
-                        required 
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الوصف</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">الوصف</label>
                     <div className="relative">
                         <input 
                             type="text" 
                             value={description} 
                             onChange={e => setDescription(e.target.value)}
-                            className="w-full border dark:border-gray-600 rounded-lg p-3 pl-12 focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-700 dark:text-white"
+                            className="w-full border dark:border-gray-600 rounded-xl p-3 pl-11 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none bg-white dark:bg-gray-700 dark:text-white"
                             placeholder="عبارة عن إيش؟"
-                            required
                         />
                         <button
                             type="button"
                             onClick={isRecording ? stopRecording : startRecording}
-                            className={`absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full ${isRecording ? 'bg-red-100 text-red-500 animate-pulse' : 'text-gray-400 hover:text-primary'}`}
+                            className={`absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors ${isRecording ? 'bg-red-100 text-red-500 animate-pulse' : 'text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                         >
-                            {isRecording ? <Square size={16} fill="currentColor" /> : <Mic size={18} />}
+                            {isRecording ? <Square size={14} fill="currentColor" /> : <Mic size={16} />}
                         </button>
                     </div>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">التصنيف</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">التصنيف</label>
                     <select 
                         value={category}
                         onChange={e => setCategory(e.target.value as ExpenseCategory)}
-                        className="w-full border dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+                        className="w-full border dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                     >
                         {Object.values(ExpenseCategory).map(cat => (
                             <option key={cat} value={cat}>{translateCategory(cat)}</option>
@@ -481,17 +486,17 @@ const ExpensesPage: React.FC = () => {
                     </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المشاركون</label>
-                  <div className="max-h-40 overflow-y-auto space-y-2 border rounded-lg p-3 dark:border-gray-600">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">المشاركون</label>
+                  <div className="max-h-28 overflow-y-auto space-y-2 border dark:border-gray-600 rounded-xl p-3 bg-gray-50 dark:bg-gray-700/50">
                     {(group?.members || []).map(memberId => {
                       const member = users.find(u => u.id === memberId);
                       return (
-                        <label key={memberId} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <label key={memberId} className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={selectedParticipants.includes(memberId)}
                             onChange={() => toggleParticipant(memberId)}
-                            className="rounded text-primary"
+                            className="w-4 h-4 rounded text-primary focus:ring-primary"
                           />
                           <span>{member?.name || 'عضو'}</span>
                         </label>
@@ -499,14 +504,19 @@ const ExpensesPage: React.FC = () => {
                     })}
                   </div>
                 </div>
+            </div>
+            </div>
+            
+            {/* Fixed Footer with Submit Button */}
+            <div className="flex-shrink-0 px-5 py-4 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-b-none sm:rounded-b-2xl">
                 <button 
-                  type="submit" 
-                  disabled={isProcessing || isSaving}
-                  className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-md hover:bg-emerald-700 mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
+                  type="button"
+                  onClick={handleSubmitExpense}
+                  disabled={isProcessing || isSaving || !amount || !description}
+                  className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg hover:bg-emerald-600 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  {modalMode === 'create' ? 'حفظ المصروف' : 'تحديث المصروف'}
+                  {isSaving ? 'جاري الحفظ...' : (modalMode === 'create' ? 'حفظ المصروف' : 'تحديث المصروف')}
                 </button>
-            </form>
             </div>
           </div>
         </div>
